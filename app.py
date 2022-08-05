@@ -1,10 +1,25 @@
+import urllib
+
 import pandas as pd
 import pymongo
 import streamlit as st
 import plotly.graph_objs as go
+import certifi
+
+ca = certifi.where()
+
 
 # Loads mongo credentials
-client = pymongo.MongoClient(**st.secrets["mongo"])
+def get_mongo_client(host, username=None, password=None):
+    return pymongo.MongoClient(
+        host if bool(username) is False
+        else f"mongodb://{username}:{password}@{host}" if host == "host.docker.internal"
+        else f"mongodb+srv://{username}:{urllib.parse.quote(password)}@{host}",
+        tlsCAFile=ca,
+    )
+
+
+client = get_mongo_client(**st.secrets["mongo"])
 db = client[st.secrets["mongo-access"]["db"]]
 collection = db[st.secrets["mongo-access"]["collection"]]
 
