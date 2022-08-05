@@ -3,4 +3,3 @@ pandas
 numpy
 pymongo
 plotly
-psycopg2-binary

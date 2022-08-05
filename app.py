@@ -2,30 +2,11 @@ import pandas as pd
 import pymongo
 import streamlit as st
 import plotly.graph_objs as go
-import psycopg2
 
 # Loads mongo credentials
 client = pymongo.MongoClient(**st.secrets["mongo"])
 db = client[st.secrets["mongo-access"]["db"]]
 collection = db[st.secrets["mongo-access"]["collection"]]
-
-
-# Loads postgres credentials
-@st.experimental_singleton
-def init_connection():
-    return psycopg2.connect(**st.secrets["postgres"])
-
-
-conn = init_connection()
-
-
-# Performs query
-# Uses st.experimental_memo to only rerun when the query changes or after 10 min.
-@st.experimental_memo(ttl=600)
-def run_query(query):
-    with conn.cursor() as cur:
-        cur.execute(query)
-        return cur.fetchall()
 
 
 # Loads the baseline graph from mongo and stores as a dataframe
@@ -46,13 +27,10 @@ st.title("Risk Forecast")
 
 # Loads accounts
 all_account_ids = collection.distinct("account_id")
-all_account_ids_fmt = "('{}')".format("', '".join(all_account_ids))
-account_name_map = dict(list(run_query(f"SELECT a.id, a.name FROM \"Account\" a WHERE a.id IN {all_account_ids_fmt}")))
 
 account_id = st.selectbox(
     "Account",
     all_account_ids,
-    format_func=lambda _account_id: f"{account_name_map[_account_id]} ({_account_id[:6]}...)"
 )
 
 # Prints graph
@@ -71,7 +49,7 @@ fig = go.Figure([
         line=dict(color='rgb(31, 119, 180)'),
     ),
     go.Scatter(
-        name='Upper Confidence',
+        name='Confidence Upper',
         x=x,
         y=y_upper,
         mode='lines',
@@ -80,7 +58,7 @@ fig = go.Figure([
         showlegend=False
     ),
     go.Scatter(
-        name='Lower Confidence',
+        name='Confidence Lower',
         x=x,
         y=y_lower,
         marker=dict(color="#444"),
