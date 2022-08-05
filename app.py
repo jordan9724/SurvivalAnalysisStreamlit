@@ -5,9 +5,9 @@ import plotly.graph_objs as go
 import psycopg2
 
 # Loads mongo credentials
-client = pymongo.MongoClient(host=st.secrets["mongo"]["host"], port=st.secrets["mongo"]["port"])
-db = client[st.secrets["mongo"]["db"]]
-collection = db[st.secrets["mongo"]["collection"]]
+client = pymongo.MongoClient(**st.secrets["mongo"])
+db = client[st.secrets["mongo-access"]["db"]]
+collection = db[st.secrets["mongo-access"]["collection"]]
 
 
 # Loads postgres credentials
