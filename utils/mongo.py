@@ -29,15 +29,22 @@ collection = db[st.secrets["mongo-access"]["collection"]]
 
 # Loads the baseline graph from mongo and stores as a dataframe
 @st.cache
-def get_graph_df(account_id: str):
+def get_graph_df(account_id: str, survival_type: str, month):
     graphs = list(
-        collection.find({"account_id": account_id, "survival_type": "days", "category_name": None, "month": None})
+        collection.find({"account_id": account_id, "survival_type": survival_type, "category_name": None, "month": month})
     )
+    # print(account_id, survival_type, month)
     if len(graphs) != 1:
         print(len(graphs))
         return
     baseline_graph = graphs[0]
-    return pd.DataFrame(baseline_graph["data"])
+    graph_df = pd.DataFrame(baseline_graph["data"])
+    graph_df.name = str(month.date()) if month else ""
+    return graph_df
+
+
+def get_months(account_id: str, survival_type: str):
+    return list(collection.find({"account_id": account_id, "survival_type": survival_type}).distinct("month"))
 
 
 def get_account_ids():

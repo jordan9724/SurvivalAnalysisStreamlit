@@ -3,3 +3,4 @@ pandas
 numpy
 plotly
 certifi
+psycopg2-binary

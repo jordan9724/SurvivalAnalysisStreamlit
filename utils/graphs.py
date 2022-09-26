@@ -2,15 +2,18 @@ import plotly.graph_objs as go
 import numpy as np
 
 
-def get_survival_plotly_fig(graph_df, x, y, y_upper, y_lower, n_subscriptions) -> go.Figure:
+def get_survival_plotly_graphs(graph_df, x, y, y_upper, y_lower, color, show_lines_only):
     survival_line = go.Scatter(
-        name='Churn Risk',
+        name=f'Churn Risk {graph_df.name or "Baseline"}',
         x=x,
         y=y,
         mode='lines',
-        line=dict(color='rgb(31, 119, 180)'),
+        line=dict(color=color),
         line_shape="hv",
     )
+    if show_lines_only:
+        return [survival_line]
+
     confidence_upper = go.Scatter(
         name='Upper Confidence',
         x=x,
@@ -61,20 +64,43 @@ def get_survival_plotly_fig(graph_df, x, y, y_upper, y_lower, n_subscriptions) -
         marker=dict(color="rgba(227, 115, 111, 1)", line=dict(width=0), size=(graph_df["observed"] / np.max(graph_df["observed"])) * 19 + 1),
     )
 
-    fig = go.Figure([
-        survival_line,
+    return [
         confidence_upper,
         confidence_lower,
-        active_customers,
-        censored_customers,
         churned_customers,
-    ])
+        censored_customers,
+        active_customers,
+        survival_line,
+    ]
+
+
+def get_survival_plotly_fig(graph_dfs: list, survival_type, show_lines_only) -> go.Figure:
+    colors = [
+        "rgb(34, 124, 157)",
+        "rgb(23, 195, 178)",
+        "rgb(255, 203, 119)",
+        "rgb(254, 109, 115)",
+    ]
+
+    all_traces = []
+    for i, graph_df in enumerate(graph_dfs):
+        if graph_df is None:
+            continue
+        x = graph_df["survival_duration"]
+        y = (1 - graph_df["estimated_surviving_percent"])
+        # These are reversed since y is reversed
+        y_upper = (1 - graph_df["confidence_lower"])
+        y_lower = (1 - graph_df["confidence_upper"])
+        all_traces += get_survival_plotly_graphs(graph_df, x, y, y_upper, y_lower, colors[i%len(colors)], show_lines_only)
+
+    fig = go.Figure(all_traces)
 
     fig.update_traces(hoverlabel={"namelength" :-1})
 
-    fig.update_layout(title=f'Baseline - Ran on {n_subscriptions} Subscriptions')
-    fig.update_layout(xaxis_title="Days")
-    fig.update_layout(yaxis_title='Churn Risk', yaxis_range=[0, 1], yaxis_tickformat='.1%')
+    n_subscriptions = graph_dfs[0]["all_at_risk"].iloc[0]
+    fig.update_layout(title=f'Ran on {n_subscriptions} Subscriptions')
+    fig.update_layout(xaxis_title=survival_type.title().replace("_", " "))
+    fig.update_layout(yaxis_title='Churn Risk', yaxis_range=[-.05, 1.05], yaxis_tickformat='.1%')
     fig.update_layout(hovermode="x")
 
     return fig
